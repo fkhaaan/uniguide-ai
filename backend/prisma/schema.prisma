@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  STUDENT
+  STAFF
+  ADMIN
+}
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  INDEXED
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model User {
+  id             String        @id @default(uuid()) @db.Uuid
+  email          String        @unique
+  passwordHash   String
+  fullName       String?
+  role           UserRole      @default(STUDENT)
+  universityId   String?       @db.Uuid
+  university     University?   @relation(fields: [universityId], references: [id], onDelete: SetNull)
+  documents      Document[]
+  chatSessions   ChatSession[]
+  aiUsageRecords AIUsage[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([universityId])
+  @@index([role])
+}
+
+model University {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String     @unique
+  country   String?
+  domain    String?    @unique
+  users     User[]
+  documents Document[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([name])
+}
+
+model Document {
+  id               String          @id @default(uuid()) @db.Uuid
+  universityId     String          @db.Uuid
+  uploadedById     String          @db.Uuid
+  university       University      @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  uploadedBy       User            @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  chunks           DocumentChunk[]
+  title            String
+  originalFileName String
+  mimeType         String
+  storageKey       String          @unique
+  status           DocumentStatus  @default(UPLOADED)
+  language         String?
+  pageCount        Int?
+  sizeBytes        Int?
+  errorMessage     String?         @db.Text
+  indexedAt        DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([universityId, status])
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @db.Uuid
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex Int
+  content    String   @db.Text
+  tokenCount Int?
+  pageNumber Int?
+  vectorId   String?  @unique
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+}
+
+model ChatSession {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @db.Uuid
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  messages  ChatMessage[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id            String      @id @default(uuid()) @db.Uuid
+  chatSessionId String      @db.Uuid
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  role          MessageRole
+  content       String      @db.Text
+  sources       Json?
+  tokenCount    Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([chatSessionId, createdAt])
+  @@index([role])
+}
+
+model AIUsage {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider         String
+  model            String
+  operation        String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  costUsd          Decimal? @db.Decimal(10, 6)
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([provider, model])
+}
