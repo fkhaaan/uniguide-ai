@@ -4,12 +4,12 @@ UniGuide AI is a university-assistant project for students. The MVP aims to prov
 
 ## Current architecture and status
 
-Step 8A establishes repository hygiene and local development conventions. The frontend is a Next.js starter; the backend exposes a starter `GET /` endpoint. PostgreSQL and the initial Prisma schema/migration exist, but the backend does not yet connect through a Prisma service. The next planned step is NestJS Prisma integration after review.
+Step 9 integrates NestJS with PostgreSQL through Prisma 7.10.0 and its PostgreSQL driver adapter. The frontend remains a Next.js starter; the backend exposes only the starter `GET /` endpoint. Database connectivity is verified by a read-only integration test. Authentication is the next planned step after review, not implemented yet.
 
 | Component | Implemented | Planned |
 | --- | --- | --- |
 | Frontend | Next.js 16.3.3, React, TypeScript, Tailwind CSS 4, App Router | Authentication screens, dashboard, document management, chat |
-| Backend | NestJS 12, TypeScript, starter endpoint and tests | Prisma integration, authentication, university APIs, document/chat APIs |
+| Backend | NestJS 12, TypeScript, Prisma integration, starter endpoint and tests | Authentication, university APIs, document/chat APIs |
 | Data | PostgreSQL 16 via Docker Compose; Prisma 7.10.0; one initial migration | Application persistence and usage reporting |
 | AI service | Empty local directory only | Python/FastAPI, parsing, embeddings, retrieval, RAG, LLM integration |
 | Other infrastructure | None | Redis, Qdrant; production deployment |
@@ -79,7 +79,7 @@ cd backend
 npm run start:dev
 ```
 
-The backend defaults to http://localhost:3001. It reads `PORT` from the process environment, so an explicit override is `PORT=3001 npm run start:dev`. Prisma CLI loads `backend/.env` through `dotenv/config`; NestJS currently does not automatically load that file. Its port fallback means no environment change is required for normal startup.
+The backend defaults to http://localhost:3001. It reads `PORT` from the process environment, so an explicit override is `PORT=3001 npm run start:dev`. Both NestJS and Prisma CLI load `backend/.env` through `dotenv/config` when run from `backend/`. Existing process environment values take precedence. DATABASE_URL is required; startup fails clearly if it is missing or blank.
 
 Start the frontend in another terminal:
 
@@ -113,9 +113,12 @@ From `backend/`:
 npm run lint
 npm test
 npm run build
+npm run test:e2e
 npx prisma validate
 npx prisma generate
 npx prisma migrate status
 ```
 
 Run `git diff --check` from the root. A fresh frontend may need `yarn build` first to generate Next.js route types used by the standalone TypeScript check.
+
+The E2E suite requires PostgreSQL and a valid DATABASE_URL. It checks the existing HTTP endpoint and runs `SELECT 1` through the registered PrismaService without creating records. Prisma connects during module initialization and disconnects on app close or graceful process shutdown.
