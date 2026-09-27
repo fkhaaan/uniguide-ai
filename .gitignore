@@ -1,4 +1,51 @@
-git add .
-git status
+# Local environments at every repository depth; examples are safe to commit.
+.env*
+!.env.example
 
+# Node dependencies and generated output
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+.nyc_output/
 *.tsbuildinfo
+
+# Prisma Client: recreate with npx prisma generate inside backend/.
+/backend/src/generated/prisma/
+
+# Python environments and caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs and local temporary files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.temp/
+.tmp/
+*.pid
+*.pid.lock
+
+# OS and editor artifacts
+.DS_Store
+._*
+Thumbs.db
+.idea/
+**/.vscode/*
+!**/.vscode/settings.json
+!**/.vscode/tasks.json
+!**/.vscode/launch.json
+!**/.vscode/extensions.json
+*.swp
+*.swo
+*~
